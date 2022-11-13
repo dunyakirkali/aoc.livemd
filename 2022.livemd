@@ -1,0 +1,32 @@
+# Advent of Code 2022
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.7.0"}
+])
+```
+
+## Day 1
+
+### TODO
+
+story
+
+```elixir
+textarea = Kino.Input.textarea("Input")
+```
+
+```elixir
+defmodule Day1 do
+  def fuel_for_module(mass) do
+    div(mass, 3) - 2
+  end
+end
+
+textarea
+|> Kino.Input.read()
+|> String.split("\n", trim: true)
+|> Enum.map(&String.to_integer/1)
+|> Enum.map(&Day1.fuel_for_module/1)
+|> Enum.sum()
+```
