@@ -1,0 +1,76 @@
+# Graphs
+
+```elixir
+Mix.install([:libgraph, :kino])
+```
+
+## Universal Orbit Map
+
+[Year 2021 Day 12](https://adventofcode.com/2021/day/12)
+
+```elixir
+input = """
+re-js
+qx-CG
+start-js
+start-bj
+qx-ak
+js-bj
+ak-re
+CG-ak
+js-CG
+bj-re
+ak-lg
+lg-CG
+qx-re
+WP-ak
+WP-end
+re-lg
+end-ak
+WP-re
+bj-CG
+qx-start
+bj-WP
+JG-lg
+end-lg
+lg-iw
+"""
+```
+
+```elixir
+data =
+  input
+  |> String.split("\n", trim: true)
+  |> Enum.map(fn line ->
+    line
+    |> String.split("-", trim: true)
+  end)
+```
+
+```elixir
+vertices =
+  data
+  |> List.flatten()
+  |> Enum.uniq()
+
+graph = Graph.new(type: :undirected)
+# |> Graph.add_vertices(vertices)
+
+graph =
+  data
+  |> Enum.reduce(graph, fn [from, to], acc ->
+    Graph.add_edge(acc, from, to)
+  end)
+```
+
+### Part 1
+
+```elixir
+Graph.get_paths(graph, "start", "end")
+```
+
+### Part 2
+
+```elixir
+
+```
