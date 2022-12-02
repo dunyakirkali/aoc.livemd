@@ -2625,24 +2625,23 @@ end)
 ## Part 2
 
 ```elixir
-moves =
-  data
-  |> Enum.map(fn [opp, exp] ->
-    opp =
-      case opp do
-        "A" -> :r
-        "B" -> :p
-        "C" -> :s
-      end
+data
+|> Enum.map(fn [opp, exp] ->
+  opp =
+    case opp do
+      "A" -> :r
+      "B" -> :p
+      "C" -> :s
+    end
 
-    you = RPS.decide_move({opp, exp})
-    {opp, you}
+  you = RPS.decide_move({opp, exp})
+  {opp, you}
+end)
+|> Enum.map(fn move ->
+  move
+  |> then(fn {_, you} = move ->
+    RPS.score_move(you) + RPS.score_game(move)
   end)
-  |> Enum.map(fn move ->
-    move
-    |> then(fn {_, you} = move ->
-      RPS.score_move(you) + RPS.score_game(move)
-    end)
-  end)
-  |> Enum.sum()
+end)
+|> Enum.sum()
 ```
