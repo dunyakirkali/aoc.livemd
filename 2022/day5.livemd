@@ -570,23 +570,26 @@ map
   |> String.split(" ", trim: false)
 end)
 
-map = %{
-  1 => ["N", "Z"],
-  2 => ["D", "C", "M"],
-  3 => ["P"]
-}
+map =
+  map
+  |> String.split("\n", trim: true)
+  |> Enum.drop(-1)
+  |> Enum.map(&String.split(&1, "", trim: true))
+  |> Enum.map(&Enum.chunk_every(&1, 4))
 
-map = %{
-  1 => ["G", "P", "N", "R"],
-  2 => ["H", "V", "S", "C", "L", "B", "J", "T"],
-  3 => ["L", "N", "M", "B", "D", "T"],
-  4 => ["B", "S", "P", "V", "R"],
-  5 => ["H", "V", "M", "W", "S", "Q", "C", "G"],
-  6 => ["J", "B", "D", "C", "S", "Q", "W"],
-  7 => ["L", "Q", "F"],
-  8 => ["V", "F", "L", "D", "T", "H", "M", "W"],
-  9 => ["F", "J", "M", "V", "B", "P", "L"]
-}
+map =
+  for row <- map do
+    for cell <- row do
+      case cell do
+        ["[", char, "]" | _] -> char
+        _ -> nil
+      end
+    end
+  end
+  |> Enum.zip_with(& &1)
+  |> Enum.map(fn chars -> Enum.reject(chars, &is_nil/1) end)
+  |> Enum.with_index(1)
+  |> Map.new(fn {stack, i} -> {i, stack} end)
 ```
 
 ## Part 1
