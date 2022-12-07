@@ -1225,7 +1225,7 @@ end
 
 ```elixir
 {:ok, image} = graph |> Graph.to_dot()
-{body, _} = System.shell("echo '#{image}' | /usr/local/bin/dot -Tpng", stderr_to_stdout: true)
+{body, _} = System.shell("echo '#{image}' | /usr/local/bin/dot -Tpng")
 Kino.Image.new(body, :png)
 ```
 
