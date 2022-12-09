@@ -2110,6 +2110,12 @@ end)
 
 ```elixir
 defmodule Mover do
+  use Agent
+
+  def start do
+    Agent.start_link(fn -> %{} end, name: __MODULE__)
+  end
+
   def move_head(direction, {hx, hy}) do
     case direction do
       "U" ->
@@ -2148,22 +2154,46 @@ defmodule Mover do
         {tx, ty}
     end
   end
+
+  def run(moves) do
+    start()
+
+    tails = for n <- 1..9, do: {0, 0}
+
+    moves
+    |> Enum.reduce({{0, 0}, tails, MapSet.new()}, fn {direction, amount},
+                                                     {{hx, hy}, tails, visited} = acc ->
+      1..amount
+      |> Enum.reduce(acc, fn _, {{hx, hy}, tails, visited} ->
+        {hnx, hny} = Mover.move_head(direction, {hx, hy})
+
+        tails =
+          tails
+          |> Enum.with_index()
+          |> Enum.map(fn {tail, index} ->
+            case index do
+              0 ->
+                nt = Mover.move_tail({hnx, hny}, tail)
+                Agent.update(__MODULE__, &Map.put(&1, index, nt))
+                nt
+
+              _ ->
+                pt = Agent.get(__MODULE__, &Map.get(&1, index - 1))
+                nt = Mover.move_tail(pt, tail)
+                Agent.update(__MODULE__, &Map.put(&1, index, nt))
+                nt
+            end
+          end)
+
+        tail = List.last(tails)
+
+        {{hnx, hny}, tails, MapSet.put(visited, tail)}
+      end)
+    end)
+    |> elem(2)
+    |> MapSet.size()
+  end
 end
 
-tails = for n <- 1..10, do: {0, 0}
-
-moves
-|> Enum.reduce({{0, 0}, tails, MapSet.new()}, fn {direction, amount},
-                                                 {{hx, hy}, tails, visited} = acc ->
-  1..amount
-  |> Enum.reduce(acc, fn _, {{hx, hy}, tails, visited} ->
-    {hnx, hny} = Mover.move_head(direction, {hx, hy})
-    tails = for tail <- tails, do: Mover.move_tail({hnx, hny}, tail)
-    tail = List.last(tails)
-
-    {{hnx, hny}, tails, MapSet.put(visited, tail)}
-  end)
-end)
-|> elem(2)
-|> MapSet.size()
+Mover.run(moves)
 ```
