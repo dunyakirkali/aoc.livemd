@@ -148,24 +148,24 @@ chart =
 
 ```elixir
 defmodule Chart do
-  def visible_exterior_trees(chart) do
-    {width, height} = Chart.size(chart) |> IO.inspect()
+  def outer(chart) do
+    {width, height} = Chart.size(chart)
     height * 2 + (width - 2) * 2
   end
 
-  def visible_interior_trees(chart) do
+  def inner(chart) do
     {width, height} = Chart.size(chart)
 
     for x <- 1..(width - 2),
         y <- 1..(height - 2),
-        Enum.any?(directions(), &vis?(Map.get(chart, {x, y}), chart, {x, y}, &1)),
+        Enum.any?(directions(), &visible?(Map.get(chart, {x, y}), chart, {x, y}, &1)),
         reduce: 0 do
       acc ->
         acc + 1
     end
   end
 
-  def vis?(height, chart, {x, y}, {dx, dy}) do
+  def visible?(height, chart, {x, y}, {dx, dy}) do
     case Map.get(chart, {x + dx, y + dy}) do
       nil ->
         true
@@ -174,7 +174,7 @@ defmodule Chart do
         false
 
       _ ->
-        vis?(height, chart, {x + dx, y + dy}, {dx, dy})
+        visible?(height, chart, {x + dx, y + dy}, {dx, dy})
     end
   end
 
@@ -213,7 +213,7 @@ defmodule Chart do
     |> Kernel.+(1)
   end
 
-  def scenic_distances(chart) do
+  def distances(chart) do
     {width, height} = Chart.size(chart)
 
     for x <- 1..(width - 2), y <- 1..(height - 2) do
@@ -242,13 +242,13 @@ end
 ## Part 1
 
 ```elixir
-Chart.visible_exterior_trees(chart) + Chart.visible_interior_trees(chart)
+Chart.outer(chart) + Chart.inner(chart)
 ```
 
 ## Part 2
 
 ```elixir
 chart
-|> Chart.scenic_distances()
+|> Chart.distances()
 |> Enum.max()
 ```
