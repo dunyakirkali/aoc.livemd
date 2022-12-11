@@ -302,9 +302,8 @@ input = %{
 end)
 |> Enum.reduce(
   {input, 0, %{0 => 0, 1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0, 6 => 0, 7 => 0}},
-  fn step, {monkeys, cmi, counts} ->
+  fn _, {monkeys, cmi, counts} ->
     cm = monkeys[cmi]
-    div(step, Enum.count(monkeys)) |> IO.inspect(label: "round")
 
     {monkeys, counts} =
       cm.items
