@@ -138,7 +138,8 @@ example = %{
       rem(val, 23) == 0
     end,
     if_true: 2,
-    if_false: 3
+    if_false: 3,
+    div: 23
   },
   1 => %{
     no: 1,
@@ -150,7 +151,8 @@ example = %{
       rem(val, 19) == 0
     end,
     if_true: 2,
-    if_false: 0
+    if_false: 0,
+    div: 19
   },
   2 => %{
     no: 2,
@@ -162,7 +164,8 @@ example = %{
       rem(val, 13) == 0
     end,
     if_true: 1,
-    if_false: 3
+    if_false: 3,
+    div: 13
   },
   3 => %{
     no: 3,
@@ -174,7 +177,8 @@ example = %{
       rem(val, 17) == 0
     end,
     if_true: 0,
-    if_false: 1
+    if_false: 1,
+    div: 17
   }
 }
 ```
@@ -379,12 +383,12 @@ divisor =
 
 0
 |> Stream.unfold(fn
-  80000 -> nil
+  40000 -> nil
   n -> {n, n + 1}
 end)
 |> Enum.reduce(
   {input, 0, %{0 => 0, 1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0, 6 => 0, 7 => 0}},
-  fn step, {monkeys, cmi, counts} ->
+  fn _, {monkeys, cmi, counts} ->
     cm = monkeys[cmi]
 
     {monkeys, counts} =
@@ -396,7 +400,7 @@ end)
           end)
 
         cm.no
-        worry = rem(item, divisor)
+        worry = rem(cm.operation.(item), divisor)
 
         to =
           if cm.test.(worry) do
@@ -429,8 +433,9 @@ end)
   end
 )
 |> elem(2)
-|> Enum.sort_by(fn {k, v} -> v end, :desc)
+|> IO.inspect()
+|> Enum.sort_by(fn {_, v} -> v end, :desc)
 |> Enum.take(2)
-|> Enum.map(fn {k, v} -> v end)
+|> Enum.map(fn {_, v} -> v end)
 |> Enum.reduce(1, fn i, acc -> i * acc end)
 ```
