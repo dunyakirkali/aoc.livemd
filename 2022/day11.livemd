@@ -314,16 +314,8 @@ end)
             old + 1
           end)
 
-        cm.no
         worry = div(cm.operation.(item), 3)
-
-        to =
-          if cm.test.(worry) do
-            cm.if_true
-          else
-            cm.if_false
-          end
-          |> IO.inspect(label: "to")
+        to = if cm.test.(worry), do: cm.if_true, else: cm.if_false
 
         monkeys =
           monkeys
@@ -345,20 +337,15 @@ end)
         {monkeys, counts}
       end)
 
-    monkeys
-    |> Enum.map(fn {no, mon} ->
-      mon.items
-      |> IO.inspect(charlists: :as_lists)
-    end)
-
     {monkeys, rem(cmi + 1, Enum.count(monkeys)), counts}
   end
 )
 |> elem(2)
-|> Enum.sort_by(fn {k, v} -> v end, :desc)
+|> Enum.map(fn {_, v} -> v end)
+|> Enum.sort()
+|> Enum.reverse()
 |> Enum.take(2)
-|> Enum.map(fn {k, v} -> v end)
-|> Enum.reduce(1, fn i, acc -> i * acc end)
+|> Enum.reduce(&Kernel.*/2)
 ```
 
 ```elixir
@@ -383,7 +370,7 @@ divisor =
 
 0
 |> Stream.unfold(fn
-  40000 -> nil
+  80000 -> nil
   n -> {n, n + 1}
 end)
 |> Enum.reduce(
@@ -399,15 +386,8 @@ end)
             old + 1
           end)
 
-        cm.no
         worry = rem(cm.operation.(item), divisor)
-
-        to =
-          if cm.test.(worry) do
-            cm.if_true
-          else
-            cm.if_false
-          end
+        to = if cm.test.(worry), do: cm.if_true, else: cm.if_false
 
         monkeys =
           monkeys
@@ -433,9 +413,9 @@ end)
   end
 )
 |> elem(2)
-|> IO.inspect()
-|> Enum.sort_by(fn {_, v} -> v end, :desc)
-|> Enum.take(2)
 |> Enum.map(fn {_, v} -> v end)
-|> Enum.reduce(1, fn i, acc -> i * acc end)
+|> Enum.sort()
+|> Enum.reverse()
+|> Enum.take(2)
+|> Enum.reduce(&Kernel.*/2)
 ```
