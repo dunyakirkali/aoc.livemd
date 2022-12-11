@@ -1,0 +1,436 @@
+# Advent of Code 2022
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.7.0"},
+  :libgraph,
+  :memoize,
+  :distance,
+  :printex,
+  :drawille,
+  {:comb, git: "https://github.com/tallakt/comb.git"},
+  {:nx, "~> 0.2"}
+])
+```
+
+## Day 11
+
+```elixir
+input = """
+Monkey 0:
+  Starting items: 65, 58, 93, 57, 66
+  Operation: new = old * 7
+  Test: divisible by 19
+    If true: throw to monkey 6
+    If false: throw to monkey 4
+
+Monkey 1:
+  Starting items: 76, 97, 58, 72, 57, 92, 82
+  Operation: new = old + 4
+  Test: divisible by 3
+    If true: throw to monkey 7
+    If false: throw to monkey 5
+
+Monkey 2:
+  Starting items: 90, 89, 96
+  Operation: new = old * 5
+  Test: divisible by 13
+    If true: throw to monkey 5
+    If false: throw to monkey 1
+
+Monkey 3:
+  Starting items: 72, 63, 72, 99
+  Operation: new = old * old
+  Test: divisible by 17
+    If true: throw to monkey 0
+    If false: throw to monkey 4
+
+Monkey 4:
+  Starting items: 65
+  Operation: new = old + 1
+  Test: divisible by 2
+    If true: throw to monkey 6
+    If false: throw to monkey 2
+
+Monkey 5:
+  Starting items: 97, 71
+  Operation: new = old + 8
+  Test: divisible by 11
+    If true: throw to monkey 7
+    If false: throw to monkey 3
+
+Monkey 6:
+  Starting items: 83, 68, 88, 55, 87, 67
+  Operation: new = old + 2
+  Test: divisible by 5
+    If true: throw to monkey 2
+    If false: throw to monkey 1
+
+Monkey 7:
+  Starting items: 64, 81, 50, 96, 82, 53, 62, 92
+  Operation: new = old + 5
+  Test: divisible by 7
+    If true: throw to monkey 3
+    If false: throw to monkey 0
+"""
+```
+
+```elixir
+example = """
+Monkey 0:
+  Starting items: 79, 98
+  Operation: new = old * 19
+  Test: divisible by 23
+    If true: throw to monkey 2
+    If false: throw to monkey 3
+
+Monkey 1:
+  Starting items: 54, 65, 75, 74
+  Operation: new = old + 6
+  Test: divisible by 19
+    If true: throw to monkey 2
+    If false: throw to monkey 0
+
+Monkey 2:
+  Starting items: 79, 60, 97
+  Operation: new = old * old
+  Test: divisible by 13
+    If true: throw to monkey 1
+    If false: throw to monkey 3
+
+Monkey 3:
+  Starting items: 74
+  Operation: new = old + 3
+  Test: divisible by 17
+    If true: throw to monkey 0
+    If false: throw to monkey 1
+"""
+```
+
+```elixir
+map =
+  example
+  |> String.split("\n\n", trim: true)
+  |> IO.inspect()
+  |> Enum.map(fn monkey ->
+    monkey
+    |> IO.inspect()
+
+    captures =
+      Regex.named_captures(
+        ~r/Monkey (?<no>.*):\n.*Starting items: (?<items>.*)\n.*Operation:(?<operations>.*)\n.*Test:(?<test>.*)\n.*If true:(?<po>.*)\n.*If false:(?<neg>.*)/,
+        monkey
+      )
+
+    captures[:no]
+  end)
+```
+
+```elixir
+example = %{
+  0 => %{
+    no: 0,
+    items: [79, 98],
+    operation: fn old ->
+      old * 19
+    end,
+    test: fn val ->
+      rem(val, 23) == 0
+    end,
+    if_true: 2,
+    if_false: 3
+  },
+  1 => %{
+    no: 1,
+    items: [54, 65, 75, 74],
+    operation: fn old ->
+      old + 6
+    end,
+    test: fn val ->
+      rem(val, 19) == 0
+    end,
+    if_true: 2,
+    if_false: 0
+  },
+  2 => %{
+    no: 2,
+    items: [79, 60, 97],
+    operation: fn old ->
+      old * old
+    end,
+    test: fn val ->
+      rem(val, 13) == 0
+    end,
+    if_true: 1,
+    if_false: 3
+  },
+  3 => %{
+    no: 3,
+    items: [74],
+    operation: fn old ->
+      old + 3
+    end,
+    test: fn val ->
+      rem(val, 17) == 0
+    end,
+    if_true: 0,
+    if_false: 1
+  }
+}
+```
+
+```elixir
+input = %{
+  0 => %{
+    no: 0,
+    items: [65, 58, 93, 57, 66],
+    operation: fn old ->
+      old * 7
+    end,
+    test: fn val ->
+      rem(val, 19) == 0
+    end,
+    if_true: 6,
+    if_false: 4,
+    div: 19
+  },
+  1 => %{
+    no: 1,
+    items: [76, 97, 58, 72, 57, 92, 82],
+    operation: fn old ->
+      old + 4
+    end,
+    test: fn val ->
+      rem(val, 3) == 0
+    end,
+    if_true: 7,
+    if_false: 5,
+    div: 3
+  },
+  2 => %{
+    no: 2,
+    items: [90, 89, 96],
+    operation: fn old ->
+      old * 5
+    end,
+    test: fn val ->
+      rem(val, 13) == 0
+    end,
+    if_true: 5,
+    if_false: 1,
+    div: 13
+  },
+  3 => %{
+    no: 3,
+    items: [72, 63, 72, 99],
+    operation: fn old ->
+      old * old
+    end,
+    test: fn val ->
+      rem(val, 17) == 0
+    end,
+    if_true: 0,
+    if_false: 4,
+    div: 17
+  },
+  4 => %{
+    no: 4,
+    items: [65],
+    operation: fn old ->
+      old + 1
+    end,
+    test: fn val ->
+      rem(val, 2) == 0
+    end,
+    if_true: 6,
+    if_false: 2,
+    div: 2
+  },
+  5 => %{
+    no: 5,
+    items: [97, 71],
+    operation: fn old ->
+      old + 8
+    end,
+    test: fn val ->
+      rem(val, 11) == 0
+    end,
+    if_true: 7,
+    if_false: 3,
+    div: 11
+  },
+  6 => %{
+    no: 6,
+    items: [83, 68, 88, 55, 87, 67],
+    operation: fn old ->
+      old + 2
+    end,
+    test: fn val ->
+      rem(val, 5) == 0
+    end,
+    if_true: 2,
+    if_false: 1,
+    div: 5
+  },
+  7 => %{
+    no: 7,
+    items: [64, 81, 50, 96, 82, 53, 62, 92],
+    operation: fn old ->
+      old + 5
+    end,
+    test: fn val ->
+      rem(val, 7) == 0
+    end,
+    if_true: 3,
+    if_false: 0,
+    div: 7
+  }
+}
+```
+
+## Part 1
+
+```elixir
+0
+|> Stream.unfold(fn
+  160 -> nil
+  n -> {n, n + 1}
+end)
+|> Enum.reduce(
+  {input, 0, %{0 => 0, 1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0, 6 => 0, 7 => 0}},
+  fn step, {monkeys, cmi, counts} ->
+    cm = monkeys[cmi]
+    div(step, Enum.count(monkeys)) |> IO.inspect(label: "round")
+
+    {monkeys, counts} =
+      cm.items
+      |> Enum.reduce({monkeys, counts}, fn item, {monkeys, counts} ->
+        counts =
+          Map.update!(counts, cm.no, fn old ->
+            old + 1
+          end)
+
+        cm.no
+        worry = div(cm.operation.(item), 3)
+
+        to =
+          if cm.test.(worry) do
+            cm.if_true
+          else
+            cm.if_false
+          end
+          |> IO.inspect(label: "to")
+
+        monkeys =
+          monkeys
+          |> Map.update!(cm.no, fn from_mon ->
+            from_mon
+            |> Map.update!(:items, fn from_items ->
+              Enum.filter(from_items, fn from_item ->
+                from_item != item
+              end)
+            end)
+          end)
+          |> Map.update!(to, fn to_mon ->
+            to_mon
+            |> Map.update!(:items, fn to_items ->
+              to_items ++ [worry]
+            end)
+          end)
+
+        {monkeys, counts}
+      end)
+
+    monkeys
+    |> Enum.map(fn {no, mon} ->
+      mon.items
+      |> IO.inspect(charlists: :as_lists)
+    end)
+
+    {monkeys, rem(cmi + 1, Enum.count(monkeys)), counts}
+  end
+)
+|> elem(2)
+|> Enum.sort_by(fn {k, v} -> v end, :desc)
+|> Enum.take(2)
+|> Enum.map(fn {k, v} -> v end)
+|> Enum.reduce(1, fn i, acc -> i * acc end)
+```
+
+```elixir
+defmodule Utils do
+  def lcm([one, two]) do
+    div(one * two, Integer.gcd(one, two))
+  end
+
+  def lcm([one | rest]) do
+    lcm([one, lcm(rest)])
+  end
+end
+```
+
+## Part 2
+
+```elixir
+divisor =
+  input
+  |> Enum.map(fn {_id, data} -> data.div end)
+  |> Utils.lcm()
+
+0
+|> Stream.unfold(fn
+  80000 -> nil
+  n -> {n, n + 1}
+end)
+|> Enum.reduce(
+  {input, 0, %{0 => 0, 1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0, 6 => 0, 7 => 0}},
+  fn step, {monkeys, cmi, counts} ->
+    cm = monkeys[cmi]
+
+    {monkeys, counts} =
+      cm.items
+      |> Enum.reduce({monkeys, counts}, fn item, {monkeys, counts} ->
+        counts =
+          Map.update!(counts, cm.no, fn old ->
+            old + 1
+          end)
+
+        cm.no
+        worry = rem(item, divisor)
+
+        to =
+          if cm.test.(worry) do
+            cm.if_true
+          else
+            cm.if_false
+          end
+
+        monkeys =
+          monkeys
+          |> Map.update!(cm.no, fn from_mon ->
+            from_mon
+            |> Map.update!(:items, fn from_items ->
+              Enum.filter(from_items, fn from_item ->
+                from_item != item
+              end)
+            end)
+          end)
+          |> Map.update!(to, fn to_mon ->
+            to_mon
+            |> Map.update!(:items, fn to_items ->
+              to_items ++ [worry]
+            end)
+          end)
+
+        {monkeys, counts}
+      end)
+
+    {monkeys, rem(cmi + 1, Enum.count(monkeys)), counts}
+  end
+)
+|> elem(2)
+|> Enum.sort_by(fn {k, v} -> v end, :desc)
+|> Enum.take(2)
+|> Enum.map(fn {k, v} -> v end)
+|> Enum.reduce(1, fn i, acc -> i * acc end)
+```
