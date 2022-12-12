@@ -131,92 +131,77 @@ defmodule Chart do
 end
 ```
 
+```elixir
+defmodule Day12 do
+  def new(input) do
+    {map, s, e} = Chart.new(input)
+
+    graph =
+      map
+      |> Enum.reduce(Graph.new(), fn {{x, y}, _}, acc ->
+        path = Enum.join([x, y], ":")
+        Graph.add_vertex(acc, path)
+      end)
+
+    graph =
+      map
+      |> Enum.reduce(graph, fn {{x, y}, fv}, acc ->
+        map
+        |> Chart.neighbours({x, y})
+        |> Enum.reduce(acc, fn {nx, ny}, acc ->
+          from = Enum.join([x, y], ":")
+          to = Enum.join([nx, ny], ":")
+          tv = Map.get(map, {nx, ny})
+          diff = tv - fv
+
+          if diff < 2 do
+            Graph.add_edge(acc, from, to)
+          else
+            acc
+          end
+        end)
+      end)
+
+    {map, graph, s, e}
+  end
+
+  def solve({_, graph, s, e}) do
+    strtp = Enum.join(Tuple.to_list(s), ":")
+    endp = Enum.join(Tuple.to_list(e), ":")
+
+    path = Graph.dijkstra(graph, strtp, endp)
+
+    if path == nil do
+      1_000_000
+    else
+      path
+      |> Enum.count()
+      |> Kernel.-(1)
+    end
+  end
+end
+```
+
 ## Part 1
 
 ```elixir
-{map, s, e} = Chart.new(input)
-
-graph =
-  map
-  |> Enum.reduce(Graph.new(), fn {{x, y}, _}, acc ->
-    path = Enum.join([x, y], ":")
-    Graph.add_vertex(acc, path)
-  end)
-
-graph =
-  map
-  |> Enum.reduce(graph, fn {{x, y}, fv}, acc ->
-    map
-    |> Chart.neighbours({x, y})
-    |> Enum.reduce(acc, fn {nx, ny}, acc ->
-      from = Enum.join([x, y], ":")
-      to = Enum.join([nx, ny], ":")
-      tv = Map.get(map, {nx, ny})
-      diff = tv - fv
-
-      if diff < 2 do
-        Graph.add_edge(acc, from, to)
-      else
-        acc
-      end
-    end)
-  end)
-
-strtp = Enum.join(Tuple.to_list(s), ":")
-endp = Enum.join(Tuple.to_list(e), ":")
-
-Graph.dijkstra(graph, strtp, endp)
-|> Enum.count()
-|> Kernel.-(1)
+input
+|> Day12.new()
+|> Day12.solve()
 ```
 
 ## Part 2
 
 ```elixir
-{map, s, e} = Chart.new(input)
-
-graph =
-  map
-  |> Enum.reduce(Graph.new(), fn {{x, y}, _}, acc ->
-    path = Enum.join([x, y], ":")
-    Graph.add_vertex(acc, path)
+input
+|> Day12.new()
+|> then(fn {map, graph, _, e} ->
+  Map.filter(map, fn {_, v} ->
+    v == 1
   end)
-
-graph =
-  map
-  |> Enum.reduce(graph, fn {{x, y}, fv}, acc ->
-    map
-    |> Chart.neighbours({x, y})
-    |> Enum.reduce(acc, fn {nx, ny}, acc ->
-      from = Enum.join([x, y], ":")
-      to = Enum.join([nx, ny], ":")
-      tv = Map.get(map, {nx, ny})
-      diff = tv - fv
-
-      if diff < 2 do
-        Graph.add_edge(acc, from, to)
-      else
-        acc
-      end
-    end)
+  |> Enum.map(fn {s, _} ->
+    Day12.solve({map, graph, s, e})
   end)
-
-Map.filter(map, fn {_, v} ->
-  v == 1
+  |> Enum.min()
 end)
-|> Enum.map(fn {s, _} ->
-  strtp = Enum.join(Tuple.to_list(s), ":")
-  endp = Enum.join(Tuple.to_list(e), ":")
-
-  path = Graph.dijkstra(graph, strtp, endp)
-
-  if path == nil do
-    100_000_000
-  else
-    path
-    |> Enum.count()
-    |> Kernel.-(1)
-  end
-end)
-|> Enum.min()
 ```
