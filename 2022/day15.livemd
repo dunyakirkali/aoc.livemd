@@ -9,11 +9,13 @@ Mix.install([
   :printex,
   :drawille,
   {:comb, git: "https://github.com/tallakt/comb.git"},
-  {:nx, "~> 0.2"}
+  {:nx, "~> 0.2"},
+  {:csp, "~> 0.1"},
+  {:solverl, ">= 1.0.0"}
 ])
 ```
 
-## Day 14
+## Day 15
 
 ```elixir
 input = """
@@ -97,19 +99,17 @@ data =
 
 ```elixir
 defmodule Day15 do
-  def n2(list) do
-    y = 2_000_000
-
+  def new(list, y \\ 2_000_000) do
     list
-    |> Enum.reduce({MapSet.new(), MapSet.new()}, fn {{n0, n1} = p1, p2}, {beacons, cants} ->
+    |> Enum.reduce({MapSet.new(), MapSet.new()}, fn {{n0, _} = p1, p2}, {beacons, cants} ->
       beacons = MapSet.put(beacons, p2)
-      dist = dist(p1, p2)
+      dist = manhattan(p1, p2)
 
       cants =
         (n0 - dist)..(n0 + dist + 1)
         |> Enum.to_list()
         |> Enum.reduce(cants, fn x, cants ->
-          if dist(p1, {x, y}) <= dist do
+          if manhattan(p1, {x, y}) <= dist do
             MapSet.put(cants, {x, y})
           else
             cants
@@ -120,85 +120,8 @@ defmodule Day15 do
     end)
   end
 
-  def new(list) do
-    list
-    |> Enum.reduce({MapSet.new(), MapSet.new()}, fn {s, b}, {map, dis} ->
-      map =
-        map
-        |> MapSet.put(s, "S")
-        |> MapSet.put(b, "B")
-
-      dis =
-        dis
-        |> MapSet.put(s, {b, dist(s, b)})
-
-      {map, dis}
-    end)
-  end
-
-  def dist({ax, ay}, {bx, by}) do
+  def manhattan({ax, ay}, {bx, by}) do
     abs(ax - bx) + abs(ay - by)
-  end
-
-  def fill({map, dis}) do
-    sensors =
-      map
-      |> Enum.filter(fn {_, v} ->
-        v == "S"
-      end)
-      |> Enum.filter(fn {{_, sy} = sp, _} ->
-        {_, radius} = MapSet.get(dis, sp)
-        0 < sy - radius and 4_000_000 < sy + radius
-      end)
-
-    sensors
-    |> Enum.reduce(map, fn {{sx, sy} = sp, _}, map ->
-      {_, radius} = MapSet.get(dis, sp)
-
-      for(x <- -radius..radius, y <- -radius..radius, do: {x, y})
-      |> Stream.filter(fn {dx, dy} ->
-        np = {sx + dx, sy + dy}
-        dist(sp, np) <= radius
-      end)
-      |> Enum.reduce(map, fn {dx, dy}, map ->
-        {nx, ny} = {sx + dx, sy + dy}
-
-        case MapSet.get(map, {nx, ny}, ".") do
-          "S" -> map
-          "B" -> map
-          "#" -> map
-          "." -> MapSet.put(map, {nx, ny}, "#")
-        end
-      end)
-    end)
-  end
-
-  def draw(map) do
-    {{minx, maxx}, {miny, maxy}} = size(map)
-
-    Enum.each(miny..maxy, fn y ->
-      Enum.map(minx..maxx, fn x ->
-        MapSet.get(map, {x, y}, ".")
-      end)
-      |> Enum.join("")
-      |> IO.puts()
-    end)
-
-    map
-  end
-
-  def size(map) do
-    xs =
-      map
-      |> MapSet.keys()
-      |> Enum.map(fn {x, _} -> x end)
-
-    ys =
-      map
-      |> MapSet.keys()
-      |> Enum.map(fn {_, y} -> y end)
-
-    {{Enum.min(xs), Enum.max(xs)}, {Enum.min(ys), Enum.max(ys)}} |> IO.inspect()
   end
 end
 ```
@@ -207,40 +130,178 @@ end
 
 ```elixir
 data
-|> Day15.n2()
+|> Day15.new()
 |> then(fn {beacons, cants} ->
   MapSet.difference(cants, beacons)
   |> Enum.count()
 end)
 ```
 
+## Part 2 - Solver (Fail)
+
 ```elixir
-data
-|> Day15.new()
-|> Day15.fill()
-|> Day15.draw()
-|> Enum.filter(fn {{_, y}, _} ->
-  y == 2_000_000
-end)
-|> Enum.count(fn {_, v} ->
-  v == "#"
-end)
+defmodule Day15CSP do
+  def solve(csp) do
+    Csp.solve(csp, method: :min_conflicts, tabu_depth: 10)
+  end
+end
 ```
 
-## Part 2
+```elixir
+solver = %Csp{
+  variables: [:x, :y],
+  domains: %{
+    x: 0..4_000_000,
+    y: 0..4_000_000
+  },
+  constraints: [
+    {[:x], fn [x] -> x >= 0 end},
+    {[:y], fn [y] -> y >= 0 end},
+    {[:x], fn [x] -> x <= 4_000_000 end},
+    {[:y], fn [y] -> y <= 4_000_000 end}
+  ]
+}
+
+solver =
+  data
+  |> Enum.reduce(solver, fn {{n0, n1}, {n2, n3}}, acc ->
+    dist = Day15.manhattan({n0, n1}, {n2, n3})
+
+    Map.update(acc, :constraints, [], fn exc ->
+      [{[:x, :y], fn [x, y] -> abs(x - n0) + abs(y - n1) >= dist end} | exc]
+    end)
+  end)
+
+# Day15CSP.solve(solver)
+```
+
+## Part 2 - Quad Tree
 
 ```elixir
-map =
-  data
-  |> Day15.new()
-  |> Day15.fill()
+defmodule Day15QT do
+  def manhattan({ax, ay}, {bx, by}) do
+    abs(ax - bx) + abs(ay - by)
+  end
 
-for(x <- 0..4_000_000, y <- 0..4_000_000, do: {x, y})
-|> Enum.filter(fn op ->
-  MapSet.get(map, op, ".") == "."
-end)
-|> List.first()
-|> then(fn {x, y} ->
-  x * 4_000_000 + y
-end)
+  def solve(list, limit \\ 4_000_000) do
+    square = {{0, 0}, {limit, limit}}
+    sensor_rays = Enum.map(list, fn {sensor, beacon} -> {sensor, manhattan(sensor, beacon)} end)
+
+    {x, y} = find_point([square], sensor_rays)
+    x * 4_000_000 + y
+  end
+
+  defp find_point([{{xl, yl}, {xh, yh}} = square | squares], rays) do
+    covered? =
+      Enum.any?(rays, fn {xy_sensor, range} ->
+        manhattan(xy_sensor, {xl, yl}) <= range and
+          manhattan(xy_sensor, {xh, yl}) <= range and
+          manhattan(xy_sensor, {xl, yh}) <= range and
+          manhattan(xy_sensor, {xh, yh}) <= range
+      end)
+
+    cond do
+      covered? ->
+        find_point(squares, rays)
+
+      is_point?(square) ->
+        square_to_point(square)
+
+      true ->
+        # if the square is not covered, we split it in four squares
+
+        add =
+          square
+          |> split_vertically()
+          |> Enum.flat_map(&split_horizontally(&1))
+
+        new_squares = add ++ squares
+
+        find_point(new_squares, rays)
+    end
+  end
+
+  defp is_point?({xy, xy}) do
+    true
+  end
+
+  defp is_point?(_) do
+    false
+  end
+
+  defp square_to_point({xy, _}) do
+    xy
+  end
+
+  defp split_vertically({{xl, yl}, {xh, yh}}) when xh > xl + 1 do
+    half_x = middle(xl, xh)
+    [{{xl, yl}, {half_x, yh}}, {{half_x + 1, yl}, {xh, yh}}]
+  end
+
+  defp split_vertically({{xl, yl}, {xh, yh}}) when xh == xl + 1 do
+    [{{xl, yl}, {xl, yh}}, {{xh, yl}, {xh, yh}}]
+  end
+
+  defp split_vertically({{x, _}, {x, _}} = square) do
+    [square]
+  end
+
+  defp split_horizontally({{xl, yl}, {xh, yh}}) when yh > yl + 1 do
+    half_y = middle(yl, yh)
+    [{{xl, yl}, {xh, half_y}}, {{xl, half_y + 1}, {xh, yh}}]
+  end
+
+  defp split_horizontally({{xl, yl}, {xh, yh}}) when yh == yl + 1 do
+    [{{xl, yl}, {xh, yl}}, {{xl, yh}, {xh, yh}}]
+  end
+
+  defp split_horizontally({{_, y}, {_, y}} = square) do
+    [square]
+  end
+
+  defp middle(low, high) do
+    high - div(high - low, 2)
+  end
+end
+```
+
+```elixir
+Day15QT.solve(data)
+```
+
+## Part 2 - Boundaries
+
+```elixir
+defmodule Day15B do
+  def new(list) do
+    sensors = list |> Enum.map(fn x -> elem(x, 0) end)
+    beacons = list |> Enum.map(fn x -> elem(x, 1) end)
+
+    list
+    |> Enum.reduce(MapSet.new(), fn {{sx, sy} = p1, p2}, map ->
+      dist = manhattan(p1, p2)
+
+      for(
+        x <- (sx - dist - 1)..(sx + dist + 2),
+        y <- (sy - dist - 1)..(sy + dist + 2),
+        do: {x, y}
+      )
+      |> Enum.filter(fn tp ->
+        manhattan(tp, p1) == dist + 1
+      end)
+      |> Enum.reduce(map, fn pos, acc ->
+        MapSet.put(acc, pos)
+      end)
+    end)
+  end
+
+  def manhattan({ax, ay}, {bx, by}) do
+    abs(ax - bx) + abs(ay - by)
+  end
+end
+```
+
+```elixir
+data
+|> Day15B.new()
 ```
