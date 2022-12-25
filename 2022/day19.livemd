@@ -1,0 +1,234 @@
+# Advent of Code 2022
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.7.0"},
+  :libgraph,
+  :memoize,
+  :distance,
+  :printex,
+  :drawille,
+  {:comb, git: "https://github.com/tallakt/comb.git"},
+  {:nx, "~> 0.2"},
+  {:vega_lite, "~> 0.1.6"},
+  {:kino_vega_lite, "~> 0.1.7"},
+  {:deque, "~> 1.0"}
+])
+```
+
+## Day 19
+
+```elixir
+input = """
+Blueprint 1: Each ore robot costs 2 ore. Each clay robot costs 4 ore. Each obsidian robot costs 4 ore and 15 clay. Each geode robot costs 2 ore and 15 obsidian.
+Blueprint 2: Each ore robot costs 4 ore. Each clay robot costs 4 ore. Each obsidian robot costs 4 ore and 12 clay. Each geode robot costs 3 ore and 8 obsidian.
+Blueprint 3: Each ore robot costs 4 ore. Each clay robot costs 4 ore. Each obsidian robot costs 4 ore and 17 clay. Each geode robot costs 4 ore and 16 obsidian.
+Blueprint 4: Each ore robot costs 4 ore. Each clay robot costs 4 ore. Each obsidian robot costs 2 ore and 16 clay. Each geode robot costs 4 ore and 16 obsidian.
+Blueprint 5: Each ore robot costs 4 ore. Each clay robot costs 3 ore. Each obsidian robot costs 4 ore and 15 clay. Each geode robot costs 3 ore and 12 obsidian.
+Blueprint 6: Each ore robot costs 2 ore. Each clay robot costs 4 ore. Each obsidian robot costs 4 ore and 17 clay. Each geode robot costs 3 ore and 11 obsidian.
+Blueprint 7: Each ore robot costs 3 ore. Each clay robot costs 3 ore. Each obsidian robot costs 3 ore and 19 clay. Each geode robot costs 2 ore and 9 obsidian.
+Blueprint 8: Each ore robot costs 3 ore. Each clay robot costs 4 ore. Each obsidian robot costs 4 ore and 18 clay. Each geode robot costs 2 ore and 11 obsidian.
+Blueprint 9: Each ore robot costs 3 ore. Each clay robot costs 3 ore. Each obsidian robot costs 3 ore and 9 clay. Each geode robot costs 3 ore and 7 obsidian.
+Blueprint 10: Each ore robot costs 4 ore. Each clay robot costs 4 ore. Each obsidian robot costs 4 ore and 15 clay. Each geode robot costs 4 ore and 17 obsidian.
+Blueprint 11: Each ore robot costs 3 ore. Each clay robot costs 3 ore. Each obsidian robot costs 2 ore and 9 clay. Each geode robot costs 2 ore and 9 obsidian.
+Blueprint 12: Each ore robot costs 2 ore. Each clay robot costs 4 ore. Each obsidian robot costs 3 ore and 20 clay. Each geode robot costs 2 ore and 17 obsidian.
+Blueprint 13: Each ore robot costs 4 ore. Each clay robot costs 3 ore. Each obsidian robot costs 4 ore and 8 clay. Each geode robot costs 3 ore and 7 obsidian.
+Blueprint 14: Each ore robot costs 3 ore. Each clay robot costs 4 ore. Each obsidian robot costs 4 ore and 20 clay. Each geode robot costs 4 ore and 16 obsidian.
+Blueprint 15: Each ore robot costs 4 ore. Each clay robot costs 4 ore. Each obsidian robot costs 4 ore and 20 clay. Each geode robot costs 2 ore and 12 obsidian.
+Blueprint 16: Each ore robot costs 4 ore. Each clay robot costs 3 ore. Each obsidian robot costs 2 ore and 13 clay. Each geode robot costs 2 ore and 10 obsidian.
+Blueprint 17: Each ore robot costs 2 ore. Each clay robot costs 3 ore. Each obsidian robot costs 3 ore and 18 clay. Each geode robot costs 2 ore and 19 obsidian.
+Blueprint 18: Each ore robot costs 3 ore. Each clay robot costs 4 ore. Each obsidian robot costs 2 ore and 15 clay. Each geode robot costs 3 ore and 7 obsidian.
+Blueprint 19: Each ore robot costs 3 ore. Each clay robot costs 4 ore. Each obsidian robot costs 3 ore and 10 clay. Each geode robot costs 4 ore and 8 obsidian.
+Blueprint 20: Each ore robot costs 4 ore. Each clay robot costs 4 ore. Each obsidian robot costs 3 ore and 6 clay. Each geode robot costs 2 ore and 14 obsidian.
+Blueprint 21: Each ore robot costs 2 ore. Each clay robot costs 3 ore. Each obsidian robot costs 3 ore and 16 clay. Each geode robot costs 2 ore and 11 obsidian.
+Blueprint 22: Each ore robot costs 3 ore. Each clay robot costs 3 ore. Each obsidian robot costs 2 ore and 19 clay. Each geode robot costs 2 ore and 20 obsidian.
+Blueprint 23: Each ore robot costs 2 ore. Each clay robot costs 3 ore. Each obsidian robot costs 2 ore and 17 clay. Each geode robot costs 3 ore and 19 obsidian.
+Blueprint 24: Each ore robot costs 3 ore. Each clay robot costs 4 ore. Each obsidian robot costs 4 ore and 16 clay. Each geode robot costs 3 ore and 15 obsidian.
+Blueprint 25: Each ore robot costs 2 ore. Each clay robot costs 3 ore. Each obsidian robot costs 3 ore and 17 clay. Each geode robot costs 3 ore and 10 obsidian.
+Blueprint 26: Each ore robot costs 4 ore. Each clay robot costs 4 ore. Each obsidian robot costs 3 ore and 20 clay. Each geode robot costs 2 ore and 10 obsidian.
+Blueprint 27: Each ore robot costs 4 ore. Each clay robot costs 4 ore. Each obsidian robot costs 2 ore and 11 clay. Each geode robot costs 2 ore and 7 obsidian.
+Blueprint 28: Each ore robot costs 4 ore. Each clay robot costs 3 ore. Each obsidian robot costs 2 ore and 10 clay. Each geode robot costs 4 ore and 10 obsidian.
+Blueprint 29: Each ore robot costs 2 ore. Each clay robot costs 2 ore. Each obsidian robot costs 2 ore and 8 clay. Each geode robot costs 2 ore and 14 obsidian.
+Blueprint 30: Each ore robot costs 3 ore. Each clay robot costs 4 ore. Each obsidian robot costs 4 ore and 18 clay. Each geode robot costs 3 ore and 8 obsidian.
+"""
+```
+
+```elixir
+example = """
+Blueprint 1: Each ore robot costs 4 ore. Each clay robot costs 2 ore. Each obsidian robot costs 3 ore and 14 clay. Each geode robot costs 2 ore and 7 obsidian.
+Blueprint 2: Each ore robot costs 2 ore. Each clay robot costs 3 ore. Each obsidian robot costs 3 ore and 8 clay. Each geode robot costs 3 ore and 12 obsidian.
+"""
+```
+
+```elixir
+Deque.new() |> Deque.popleft()
+```
+
+```elixir
+defmodule Day19 do
+  def input(data) do
+    data
+    |> String.split("\n", trim: true)
+    |> Enum.map(fn
+      line ->
+        matches =
+          ~r/Blueprint (?<blueprint>\d+).*(?<ore_ore>\d+).*(?<clay_ore>\d+).*(?<obsidian_ore>\d+).*(?<obsidian_clay>\d+).*(?<goede_ore>\d+).*(?<goede_obsidian>\d+).*/
+          |> Regex.named_captures(line)
+          |> Enum.map(fn {k, v} -> {k, String.to_integer(v)} end)
+          |> Enum.into(%{})
+
+        %{
+          :id => matches["blueprint"],
+          :ore => %{:ore => matches["ore_ore"]},
+          :clay => %{:ore => matches["clay_ore"]},
+          :obsidian => %{:clay => matches["obsidian_clay"], :ore => matches["obsidian_ore"]},
+          :goede => %{:obsidian => matches["goede_obsidian"], :ore => matches["goede_ore"]}
+        }
+    end)
+  end
+
+  def part1(blueprints) do
+    blueprints
+    |> Enum.map(&solve(&1, 24))
+    |> IO.inspect(charlists: :as_lists)
+    |> Enum.with_index()
+    |> IO.inspect(charlists: :as_lists)
+    |> Enum.map(fn {max_goede, index} ->
+      max_goede * (index + 1)
+    end)
+    |> IO.inspect(charlists: :as_lists)
+    |> Enum.sum()
+  end
+
+  def solve(blueprint, minutes) do
+    best = 0
+    state = {0, 0, 0, 0, 1, 0, 0, 0, minutes}
+    queue = Deque.new()
+    queue = Deque.append(queue, state)
+    seen = MapSet.new()
+
+    Stream.iterate(0, &(&1 + 1))
+    |> Enum.reduce_while({best, queue, seen}, fn _, {best, queue, set} ->
+      case Deque.popleft(queue) do
+        {nil, _} -> {:halt, best}
+        {state, queue} -> do_solve(state, best, queue, set, blueprint)
+      end
+    end)
+  end
+
+  def do_solve(state, best, queue, set, blueprint) do
+    queue |> Enum.count() |> IO.inspect(label: "queue")
+    {o, c, ob, g, r1, r2, r3, r4, t} = state
+
+    best = max(best, g)
+
+    if t == 0 do
+      {:cont, {best, queue, set}}
+    else
+      max_core =
+        Enum.max([
+          blueprint.ore.ore,
+          blueprint.clay.ore,
+          blueprint.obsidian.ore,
+          blueprint.goede.ore
+        ])
+
+      r1 = if r1 >= max_core, do: max_core, else: r1
+      r2 = if r2 >= blueprint.obsidian.clay, do: blueprint.obsidian.clay, else: r2
+      r3 = if r3 >= blueprint.goede.obsidian, do: blueprint.goede.obsidian, else: r3
+      o = if o >= t * max_core - r1 * (t - 1), do: t * max_core - r1 * (t - 1), else: o
+
+      c =
+        if c >= t * blueprint.obsidian.clay - r2 * (t - 1),
+          do: t * blueprint.obsidian.clay - r2 * (t - 1),
+          else: c
+
+      ob =
+        if ob >= t * blueprint.goede.obsidian - r3 * (t - 1),
+          do: t * blueprint.goede.obsidian - r3 * (t - 1),
+          else: ob
+
+      state = {o, c, ob, g, r1, r2, r3, r4, t}
+
+      if t > 23 do
+        IO.inspect(state, label: "state")
+      end
+
+      if MapSet.member?(set, state) do
+        {:cont, {best, queue, set}}
+      else
+        set = MapSet.put(set, state)
+
+        if rem(MapSet.size(set), 1_000_000) == 0 do
+          IO.inspect(t, best, MapSet.size(set))
+        end
+
+        queue = Deque.append(queue, {o + r1, c + r2, ob + r3, g + r4, r1, r2, r3, r4, t - 1})
+
+        queue =
+          if o >= blueprint.ore.ore,
+            do:
+              Deque.append(
+                queue,
+                {o - blueprint.ore.ore + r1, c + r2, ob + r3, g + r4, r1 + 1, r2, r3, r4, t - 1}
+              ),
+            else: queue
+
+        queue =
+          if o >= blueprint.clay.ore,
+            do:
+              Deque.append(
+                queue,
+                {o - blueprint.clay.ore + r1, c + r2, ob + r3, g + r4, r1, r2 + 1, r3, r4, t - 1}
+              ),
+            else: queue
+
+        queue =
+          if o >= blueprint.obsidian.ore and c >= blueprint.obsidian.clay,
+            do:
+              Deque.append(
+                queue,
+                {o - blueprint.obsidian.ore + r1, c - blueprint.obsidian.clay + r2, ob + r3,
+                 g + r4, r1, r2, r3 + 1, r4, t - 1}
+              ),
+            else: queue
+
+        queue =
+          if o >= blueprint.goede.ore and ob >= blueprint.goede.obsidian,
+            do:
+              Deque.append(
+                queue,
+                {o - blueprint.goede.ore + r1, c + r2, ob - blueprint.goede.obsidian + r3, g + r4,
+                 r1, r2, r3, r4 + 1, t - 1}
+              ),
+            else: queue
+
+        {:cont, {best, queue, set}}
+      end
+    end
+  end
+
+  # def part2(blueprints) do
+  #   blueprints
+  #   |> Enum.take(3)
+  #   |> Enum.map(&solve/1)
+  #   |> Enum.reduce(1, fn x, acc -> x * acc end)
+  # end
+end
+```
+
+## Part 1
+
+```elixir
+example
+|> Day19.input()
+|> Day19.part1()
+```
+
+## Part 2
+
+```elixir
+input
+|> Day19.input()
+|> Day19.part2()
+```
